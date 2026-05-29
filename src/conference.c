@@ -6,9 +6,6 @@
  *  under the GNU General Public License 3.0.
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE    /* needed for strcasestr() and wcswidth() */
-#endif
 
 #include <assert.h>
 #include <inttypes.h>
@@ -20,17 +17,12 @@
 #include <wchar.h>
 
 #ifdef AUDIO
-#ifdef __APPLE__
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-#else
 #include <AL/al.h>
 #include <AL/alc.h>
 /* compatibility with older versions of OpenAL */
 #ifndef ALC_ALL_DEVICES_SPECIFIER
 #include <AL/alext.h>
 #endif /* ALC_ALL_DEVICES_SPECIFIER */
-#endif /* __APPLE__ */
 #endif /* AUDIO */
 
 #include "audio_device.h"

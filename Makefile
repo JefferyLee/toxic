@@ -36,6 +36,7 @@ endif
 # Check on wich system we are running
 UNAME_S = $(shell uname -s)
 ifeq ($(UNAME_S), Linux)
+CFLAGS += -D_GNU_SOURCE
 LDFLAGS += -ldl -lrt
 endif
 ifeq ($(UNAME_S), OpenBSD)

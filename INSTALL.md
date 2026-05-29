@@ -1,6 +1,6 @@
 # Installation
 * [Dependencies](#dependencies)
-  * [OS X Notes](#os-x-notes)
+  * [macOS Notes](#macos-notes)
 * [Compiling](#compiling)
   * [Documentation](#documentation)
 * [Notes](#notes)
@@ -36,15 +36,23 @@ Run `make doc` in the build directory after editing the asciidoc files to regene
 **Note for developers**: asciidoc files and generated manpages will need to be committed together.<br />
 **Note for everyone**: [asciidoc](http://asciidoc.org/index.html) (and this step) is only required for regenerating manpages when you modify them.
 
-#### OS X Notes
+#### macOS Notes
 Using [Homebrew](http://brew.sh):
 ```
-brew install curl qrencode openal-soft freealut libconfig libpng
-brew install --HEAD https://raw.githubusercontent.com/Tox/homebrew-tox/master/Formula/libtoxcore.rb
-brew install libnotify
-export PKG_CONFIG_PATH=/usr/local/opt/openal-soft/lib/pkgconfig
+brew install pkg-config toxcore openal-soft freealut libconfig libpng qrencode
 make
 ```
+
+X11 and libnotify are disabled automatically on macOS; everything else (audio calls,
+sound notifications, QR/PNG export) is enabled. Works on both Intel (`/usr/local`)
+and Apple Silicon (`/opt/homebrew`) — Homebrew prefix is detected via
+`brew --prefix`, so no `PKG_CONFIG_PATH` export is needed.
+
+Video calls are not currently supported on macOS. The capture side (`osx_video.m`)
+uses AVFoundation, but the preview/display path in `video_device.c` still goes
+through X11 windows, and `x11focus.h` is `#ifndef __APPLE__`-gated, so enabling
+X11 on macOS does not produce a working build. Treating macOS as audio-only is
+the working configuration.
 
 #### FreeBSD Notes
 To compile Toxic on FreeBSD you'll need to use `gmake` instead of `make`, and you may need to manually tell `pkg-config` where to find the toxcore library.

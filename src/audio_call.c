@@ -33,17 +33,12 @@
 #include <strings.h>
 #include <unistd.h>
 
-#ifdef __APPLE__
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-#else
 #include <AL/al.h>
 #include <AL/alc.h>
 /* compatibility with older versions of OpenAL */
 #ifndef ALC_ALL_DEVICES_SPECIFIER
 #include <AL/alext.h>
 #endif /* ALC_ALL_DEVICES_SPECIFIER */
-#endif /* __APPLE__ */
 
 void on_call(ToxAV *av, uint32_t friend_number, bool audio_enabled, bool video_enabled,
              void *user_data);

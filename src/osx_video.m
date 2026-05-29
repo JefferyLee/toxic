@@ -7,6 +7,12 @@
  */
 
 #ifdef __OBJC__
+
+// CoreVideo's OpenGL type-ID functions are deprecated on macOS 10.14+. We only
+// reference them to skip frames of those types, never to use OpenGL APIs.
+// Must be defined before any header that transitively imports CoreVideo.
+#define COREVIDEO_SILENCE_GL_DEPRECATION 1
+
 #include "osx_video.h"
 
 #import <AVFoundation/AVFoundation.h>
@@ -42,7 +48,7 @@ static uint8_t rgb_to_v(int r, int g, int b)
     return v > 255 ? 255 : v < 0 ? 0 : v;
 }
 
-void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t *rgb,
+static void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t *rgb,
     uint16_t width, uint16_t height)
 {
     uint16_t x, y;
@@ -96,6 +102,20 @@ void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t 
  * End of helper video format functions
  */
 
+static NSArray<AVCaptureDevice *> *toxic_video_devices(void)
+{
+    NSArray<AVCaptureDeviceType> *types = @[
+        AVCaptureDeviceTypeBuiltInWideAngleCamera,
+        AVCaptureDeviceTypeExternal,
+        AVCaptureDeviceTypeContinuityCamera,
+    ];
+    AVCaptureDeviceDiscoverySession *session =
+        [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:types
+                                                              mediaType:AVMediaTypeVideo
+                                                               position:AVCaptureDevicePositionUnspecified];
+    return session.devices;
+}
+
 /*
  * Implementation for OSXVideo
  */
@@ -113,7 +133,7 @@ void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t 
 {
     _session = [[AVCaptureSession alloc] init];
 
-    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    NSArray *devices = toxic_video_devices();
     int i;
 
     for (i = 0; i < [devices count]; ++i) {
@@ -122,7 +142,7 @@ void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t 
         NSString *localizedName = [device localizedName];
         video_input_name
             = (char *)malloc(strlen([localizedName cStringUsingEncoding:NSUTF8StringEncoding]) + 1);
-        strcpy(video_input_name, (char *)[localizedName cStringUsingEncoding:NSUTF8StringEncoding]);
+        strcpy(video_input_name, [localizedName cStringUsingEncoding:NSUTF8StringEncoding]);
         device_names[i] = video_input_name;
     }
 
@@ -149,7 +169,7 @@ void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t 
     pthread_mutex_init(&_frameLock, NULL);
     pthread_mutex_lock(&_frameLock);
     _processingQueue = dispatch_queue_create("Toxic processing queue", DISPATCH_QUEUE_SERIAL);
-    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    NSArray *devices = toxic_video_devices();
     AVCaptureDevice *device = [devices objectAtIndex:device_idx];
     NSError *error = NULL;
     AVCaptureInput *input = [[AVCaptureDeviceInput alloc] initWithDevice:device error:&error];
@@ -166,8 +186,6 @@ void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t 
     //*height = 480;
     _shouldMangleDimensions = YES;
     [_session commitConfiguration];
-    [input release];
-    [device release];
 
     /* Obtain device resolution */
     AVCaptureInputPort *port = [input.ports objectAtIndex:0];
@@ -181,6 +199,8 @@ void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t 
         *width = 0;
         *height = 0;
     }
+
+    [input release];
 
     _linkerVideo = [[AVCaptureVideoDataOutput alloc] init];
     [_linkerVideo setSampleBufferDelegate:self queue:_processingQueue];
@@ -207,7 +227,7 @@ void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t 
 
 - (void)closeVideoDeviceIndex:(uint32_t)device_idx
 {
-    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    NSArray *devices = toxic_video_devices();
     AVCaptureDevice *device = [devices objectAtIndex:device_idx];
     NSError *error = NULL;
     AVCaptureInput *input = [[AVCaptureDeviceInput alloc] initWithDevice:device error:&error];
@@ -230,7 +250,8 @@ void bgrxtoyuv420(uint8_t *plane_y, uint8_t *plane_u, uint8_t *plane_v, uint8_t 
         CVPixelBufferUnlockBaseAddress(_currentFrame, kCVPixelBufferLock_ReadOnly);
         RELEASE_CHK(CFRelease, _currentFrame);
 
-        _currentFrame = (CVImageBufferRef)CFRetain(img);
+        CFRetain(img);
+        _currentFrame = img;
         // we're not going to do anything to it, so it's safe to lock it always
         CVPixelBufferLockBaseAddress(_currentFrame, kCVPixelBufferLock_ReadOnly);
     }
@@ -288,7 +309,7 @@ int osx_video_init(char **device_names, int *size)
     return 0;
 }
 
-void osx_video_release()
+void osx_video_release(void)
 {
     [_OSXVideo release];
     _OSXVideo = nil;

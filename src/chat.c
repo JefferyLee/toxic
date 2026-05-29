@@ -6,9 +6,6 @@
  *  under the GNU General Public License 3.0.
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE    /* needed for strcasestr() and wcswidth() */
-#endif
 
 #include "chat.h"
 
