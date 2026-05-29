@@ -3,6 +3,21 @@
        src="https://scan.coverity.com/projects/4975/badge.svg"/>
 </a>
 
+## About this fork
+
+This fork ports Toxic to **macOS 14+ on Apple Silicon**. Plain `make` builds cleanly with zero warnings against the current SDK — no environment flags or `PKG_CONFIG_PATH` juggling required. End-to-end DHT bootstrap and friend connectivity verified on macOS 26.4.1 / arm64.
+
+Headline changes vs. upstream:
+- Homebrew prefix is auto-detected via `brew --prefix`, so the same build works on Intel (`/usr/local`) and Apple Silicon (`/opt/homebrew`).
+- `osx_video.m` modernized: `AVCaptureDeviceDiscoverySession` replaces the deprecated `devicesWithMediaType:`, plus a real `AVCaptureDevice` over-release bug fixed.
+- OpenAL includes on macOS switched from the deprecated system framework headers (`<OpenAL/al.h>`) to openal-soft (`<AL/al.h>`), which is what already gets linked.
+- `_GNU_SOURCE` moved into the Linux branch of the Makefile (it's a no-op on macOS and was producing `-Wunused-macros` noise in every file that defined it).
+- X11 and libnotify default to disabled on macOS. Video calls are **not** currently functional on macOS — capture is in place via AVFoundation, but the preview/display path still depends on X11 and the surrounding `__APPLE__` gating is inconsistent. See [INSTALL.md](/INSTALL.md) for details.
+
+The rest of this README is from upstream and unchanged. macOS installation instructions are in [INSTALL.md](/INSTALL.md).
+
+---
+
 Toxic is a [Tox](https://tox.chat)-based peer-to-peer messenger that provides end-to-end encrypted communications without the use of centralized servers. It supports text messaging, file sharing, 1-on-1 voice and video calls, private audio conferences, public and private text group chats, and a few built-in games you can play with your friends. Toxic requires no registration or setup, and is ready to use out of the box. Its interface is highly customizable to suit your preferences.
 
 [![Toxic Screenshot](https://i.imgur.com/TwYA8L0.png "Toxic Home Screen")](https://i.imgur.com/TwYA8L0.png)
